@@ -492,7 +492,7 @@ Implement a function that returns the last digit of a given number.
   whether it works for you!
 -}
 lastDigit :: Int -> Int
-lastDigit x = mod x 10
+lastDigit x = mod (abs x) 10
 
 
 {- |
@@ -522,7 +522,7 @@ branches because it is an expression and it must always return some value.
   satisfying the check will be returned and, therefore, evaluated.
 -}
 closestToZero :: Int -> Int -> Int
-closestToZero x y = min (abs x) (abs y)
+closestToZero x y = if abs x < abs y then x else y
 
 
 {- |
@@ -664,8 +664,10 @@ aren't ready for this boss yet!
 -}
 -- NOTE: Can get around recursion with some math here
 firstDigit :: Int -> Int
-firstDigit n = div (abs n) (10 ^ (floor (logBase 10 nFloat)))
+firstDigit 0 = 0
+firstDigit n = div (abs n) (10 ^ nDigits)
   where
+    nDigits = floor (logBase 10 nFloat) :: Int
     nFloat = fromIntegral (abs n) :: Float
 
 
