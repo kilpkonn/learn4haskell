@@ -1115,7 +1115,7 @@ rotate n xs = if n >= 0 then take (length xs) $ drop n $ cycle xs else []
 newtype Dmg = Dmg Int
 
 class PerfFight a where
-  perform :: a -> a
+  perform :: Dmg -> a -> (Dmg, a)
 
 class PerfAction a where
   step :: Dmg -> a -> (Dmg, a)
@@ -1127,7 +1127,7 @@ data KnightAction = KnightAttack | KnightDefend | KnightEat | KnightRun deriving
 data MonsterAction = MonsterAttack | MonsterRun deriving (Enum)
 
 data Knight' a = Knight'
-  { kHealt :: Int
+  { kHealth :: Int
   , kDefence :: Int
   , knightActions :: [a] } deriving (Show)
 
@@ -1144,21 +1144,50 @@ instance Attack' KnightAction where
   attack KnightAttack = Dmg 100
   attack _ = Dmg 0
 
+instance Attack' MonsterAction where
+  attack :: MonsterAction -> Dmg
+  attack MonsterAttack = Dmg 50
+  attack _ = Dmg 0
+
 instance Attack' a => Attack' (Knight' a) where
   attack :: Knight' a -> Dmg
   attack k = case knightActions k of
     (x:_) -> attack x
     _ -> Dmg 0
 
+instance Attack' a => Attack' (Monster' a) where
+  attack :: Monster' a -> Dmg
+  attack m = case monsterActions m of
+    (x:_) -> attack x
+    _ -> Dmg 0
+
 instance Attack' a => PerfAction (Knight' a) where
   step :: Dmg -> Knight' a -> (Dmg, Knight' a)
-  step dmg k = (dmg, k)
+  step dmg k = 
+    let 
+      Dmg d = dmg
+      ka = rotate 1 (knightActions k)
+    in 
+      (attack k, k { kHealth = (kHealth k) - d, knightActions = ka })
+
+instance Attack' a => PerfAction (Monster' a) where
+  step :: Dmg -> Monster' a -> (Dmg, Monster' a)
+  step dmg m = 
+    let 
+      Dmg d = dmg
+      ma = rotate 1 (monsterActions m)
+    in 
+      (attack m, m { mHealth = (mHealth m) - d, monsterActions = ma })
 
 instance (PerfAction k, PerfAction m) => PerfFight (Fight k m) where
-  perform :: Fight k m -> Fight k m
-  perform fight = fight 
-    { fKnight = perform (fKnight fight)
-    , fMonster = perform (fMonster fight) }
+  perform :: Dmg -> Fight k m -> (Dmg, Fight k m)
+  perform dLast fight = 
+    let 
+       (dmgK, knight) = step dLast (fKnight fight)
+       (dmgM, monster) = step dmgK (fMonster fight)
+    in (dmgM, fight 
+        { fKnight = knight
+        , fMonster = monster })
 
 
 {-
